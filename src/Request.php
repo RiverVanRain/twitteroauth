@@ -14,6 +14,7 @@ class Request
     protected $parameters;
     protected $httpMethod;
     protected $httpUrl;
+    protected $json;
     public static $version = '1.0';
 
     /**
@@ -21,12 +22,12 @@ class Request
      *
      * @param string     $httpMethod
      * @param string     $httpUrl
-     * @param ?array     $parameters
+     * @param array|null $parameters
      */
     public function __construct(
         string $httpMethod,
         string $httpUrl,
-        ?array $parameters = [],
+        ?array $parameters = []
     ) {
         $parameters = array_merge(
             Util::parseParameters(parse_url($httpUrl, PHP_URL_QUERY)),
@@ -40,21 +41,21 @@ class Request
     /**
      * pretty much a helper function to set up the request
      *
-     * @param Consumer   $consumer
-     * @param string     $httpMethod
-     * @param string     $httpUrl
-     * @param Token|null $token
-     * @param array      $parameters
+     * @param Consumer $consumer
+     * @param Token    $token
+     * @param string   $httpMethod
+     * @param string   $httpUrl
+     * @param array    $parameters
      *
      * @return Request
      */
     public static function fromConsumerAndToken(
         Consumer $consumer,
+        Token $token = null,
         string $httpMethod,
         string $httpUrl,
-        ?Token $token = null,
         array $parameters = [],
-        array $options = [],
+        $json = false
     ) {
         $defaults = [
             'oauth_version' => Request::$version,
@@ -68,7 +69,7 @@ class Request
 
         // The json payload is not included in the signature on json requests,
         // therefore it shouldn't be included in the parameters array.
-        if ($options['jsonPayload'] ?? false) {
+        if ($json) {
             $parameters = $defaults;
         } else {
             $parameters = array_merge($defaults, $parameters);
@@ -246,12 +247,12 @@ class Request
     /**
      * @param SignatureMethod $signatureMethod
      * @param Consumer        $consumer
-     * @param Token|null      $token
+     * @param Token           $token
      */
     public function signRequest(
         SignatureMethod $signatureMethod,
         Consumer $consumer,
-        ?Token $token = null,
+        Token $token = null
     ) {
         $this->setParameter(
             'oauth_signature_method',
@@ -264,14 +265,14 @@ class Request
     /**
      * @param SignatureMethod $signatureMethod
      * @param Consumer        $consumer
-     * @param Token|null      $token
+     * @param Token           $token
      *
      * @return string
      */
     public function buildSignature(
         SignatureMethod $signatureMethod,
         Consumer $consumer,
-        ?Token $token = null,
+        Token $token = null
     ): string {
         return $signatureMethod->buildSignature($this, $consumer, $token);
     }
