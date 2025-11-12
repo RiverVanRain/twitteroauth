@@ -18,6 +18,8 @@ use Abraham\TwitterOAuth\{
     Util\JsonDecoder,
 };
 use Composer\CaBundle\CaBundle;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 /**
  * TwitterOAuth class for interacting with the Twitter API.
@@ -220,6 +222,9 @@ class TwitterOAuth extends Config
         );
         $response = JsonDecoder::decode($result, $this->decodeJsonAsArray);
         $this->response->setBody($response);
+
+        $this->log('Oauth2 Response: ' . var_export($response, true));
+
         return $response;
     }
 
@@ -325,6 +330,7 @@ class TwitterOAuth extends Config
             [],
             false
         );
+
         return $finalize;
     }
 
@@ -369,6 +375,9 @@ class TwitterOAuth extends Config
         if (isset($parameters['media_category'])) {
             $return['media_category'] = $parameters['media_category'];
         }
+
+        $this->log('Media Init Parameters: ' . var_export($return, true));
+
         return $return;
     }
 
@@ -457,6 +466,8 @@ class TwitterOAuth extends Config
             $parameters = $this->cleanUpParameters($parameters);
         }
 
+        $this->log('Make requests: - apiUrl: ' . var_export($this->apiUrl($host, $path), true) . '- method: ' . var_export($method, true) . '- parameters: ' . var_export($parameters, true) . '- json: ' . $json);
+
         return $this->makeRequests(
             $this->apiUrl($host, $path),
             $method,
@@ -514,6 +525,8 @@ class TwitterOAuth extends Config
             $this->attempts++;
             // Retry up to our $maxRetries number if we get errors greater than 500 (over capacity etc)
         } while ($this->requestsAvailable());
+
+        $this->log('Response from Make requests: ' . var_export($response, true));
 
         return $response;
     }
@@ -786,5 +799,21 @@ class TwitterOAuth extends Config
         }
 
         return $curlOptions;
+    }
+
+    /** Logger */
+    public function log($message = '')
+    {
+        if (!(bool) elgg_get_plugin_setting('debug_mode', 'elgg_hybridauth')) {
+            return '';
+        }
+
+        $log_file = elgg_get_data_path() . 'hybridauth/logs/log_twitteroauth_error';
+
+        $log = new Logger('HybridAuth');
+        $log->pushHandler(new StreamHandler($log_file, Logger::WARNING));
+
+        // add records to the log
+        return $log->warning($message);
     }
 }
